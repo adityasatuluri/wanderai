@@ -1,0 +1,651 @@
+{% extends 'base.html' %} {% block title %}Wander AI{% endblock %} {% block
+content %}
+
+<style>
+  .minimal-chat-shell,
+  .minimal-chat-shell * {
+    box-sizing: border-box;
+  }
+
+  body {
+    background: #f4f7fb;
+    overflow: hidden;
+  }
+
+  /* ---------- MAIN LAYOUT ---------- */
+
+  .minimal-chat-shell {
+    max-width: 1150px;
+
+    margin: 0 auto;
+
+    height: calc(100vh - 100px);
+
+    display: flex;
+
+    flex-direction: column;
+
+    padding: 20px 28px;
+  }
+
+  /* ---------- SUGGESTIONS ---------- */
+
+  .quick-prompts {
+    display: flex;
+
+    gap: 14px;
+
+    flex-wrap: wrap;
+
+    justify-content: center;
+
+    padding: 10px 0 18px;
+
+    margin-bottom: 18px;
+
+    flex-shrink: 0;
+  }
+
+  .suggestion-btn {
+    border: none;
+
+    background: white;
+
+    color: #111827;
+
+    padding: 14px 20px;
+
+    border-radius: 999px;
+
+    font-size: 14px;
+
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition: 0.2s;
+
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.05);
+  }
+
+  .suggestion-btn:hover {
+    transform: translateY(-2px);
+  }
+
+  /* ---------- CHAT FEED ---------- */
+
+  .chat-feed {
+    flex: 1 1 auto;
+
+    overflow-y: auto;
+
+    min-height: 0;
+
+    padding-right: 8px;
+
+    scroll-behavior: smooth;
+
+    display: flex;
+
+    flex-direction: column;
+  }
+
+  .chat-feed::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .chat-feed::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 999px;
+  }
+
+  /* ---------- INPUT ---------- */
+
+  .chat-input-wrap {
+    display: flex;
+
+    gap: 18px;
+
+    align-items: flex-end;
+
+    padding-top: 20px;
+
+    margin-top: auto;
+
+    margin-bottom: 10px;
+
+    flex-shrink: 0;
+  }
+
+  .chat-textarea {
+    flex: 1;
+
+    min-height: 60px;
+
+    max-height: 180px;
+
+    resize: none;
+
+    border: 1px solid #e5e7eb;
+
+    outline: none;
+
+    background: white;
+
+    border-radius: 24px;
+
+    padding: 18px 24px;
+
+    font-size: 15px;
+
+    line-height: 1.5;
+
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  }
+
+  .chat-textarea::placeholder {
+    color: #94a3b8;
+  }
+
+  .send-btn {
+    width: 140px;
+
+    height: 60px;
+
+    border: none;
+
+    border-radius: 24px;
+
+    background: #2563eb;
+
+    color: white;
+
+    font-weight: 700;
+
+    cursor: pointer;
+
+    transition: 0.2s;
+
+    box-shadow: 0 8px 25px rgba(37, 99, 235, 0.25);
+
+    flex-shrink: 0;
+  }
+
+  .send-btn:hover {
+    transform: translateY(-2px);
+  }
+
+  /* ---------- LOADER ---------- */
+
+  .loader-shell {
+    width: 320px;
+
+    background: white;
+
+    border-radius: 30px;
+
+    padding: 28px;
+
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  }
+
+  .loader-line {
+    height: 12px;
+
+    border-radius: 999px;
+
+    background: #e5e7eb;
+
+    margin-bottom: 16px;
+
+    animation: pulse 1s infinite;
+  }
+
+  .loader-line:nth-child(2) {
+    width: 80%;
+  }
+
+  .loader-line:nth-child(3) {
+    width: 60%;
+  }
+
+  @keyframes pulse {
+    0% {
+      opacity: 0.5;
+    }
+
+    50% {
+      opacity: 1;
+    }
+
+    100% {
+      opacity: 0.5;
+    }
+  }
+
+  /* ---------- CHAT MESSAGE SYSTEM ---------- */
+
+  .chat-row {
+    display: flex;
+
+    width: 100%;
+
+    margin-bottom: 28px;
+
+    animation: messageFadeIn 0.25s ease;
+  }
+
+  .user-row {
+    justify-content: flex-end;
+  }
+
+  .bot-row {
+    justify-content: flex-start;
+  }
+
+  .bot-response-wrapper {
+    width: 100%;
+
+    max-width: 100%;
+  }
+
+  .user-bubble {
+    background: #2563eb;
+
+    color: white;
+
+    padding: 16px 22px;
+
+    border-radius: 24px 24px 8px 24px;
+
+    max-width: 70%;
+
+    line-height: 1.7;
+
+    font-size: 15px;
+
+    box-shadow: 0 8px 24px rgba(37, 99, 235, 0.18);
+  }
+
+  .bot-bubble {
+    width: 100%;
+
+    background: transparent;
+
+    color: #111827;
+  }
+
+  /* ---------- TRIP WRAPPER ---------- */
+
+  .trip-wrapper {
+    width: 100%;
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 22px;
+  }
+
+  /* ---------- HERO ---------- */
+
+  .trip-hero {
+    width: 100%;
+
+    background: white;
+
+    border-radius: 28px;
+
+    padding: 30px;
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    gap: 20px;
+
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  }
+
+  .trip-heading {
+    font-size: 38px;
+
+    font-weight: 800;
+
+    color: #111827;
+
+    line-height: 1.1;
+  }
+
+  .trip-subheading {
+    margin-top: 10px;
+
+    color: #6b7280;
+
+    font-size: 16px;
+  }
+
+  .trip-stats {
+    display: flex;
+
+    gap: 12px;
+
+    flex-wrap: wrap;
+  }
+
+  .trip-pill {
+    background: #2563eb;
+
+    color: white;
+
+    padding: 12px 16px;
+
+    border-radius: 999px;
+
+    font-weight: 700;
+
+    font-size: 14px;
+  }
+
+  /* ---------- METRICS ---------- */
+
+  .metrics-grid {
+    display: grid;
+
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+
+    gap: 18px;
+
+    width: 100%;
+  }
+
+  .metric-card {
+    background: white;
+
+    border-radius: 24px;
+
+    padding: 24px;
+
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.04);
+
+    min-height: 150px;
+
+    display: flex;
+
+    flex-direction: column;
+
+    justify-content: center;
+  }
+
+  .metric-name {
+    color: #6b7280;
+
+    font-size: 14px;
+  }
+
+  .metric-value {
+    font-size: 42px;
+
+    font-weight: 800;
+
+    color: #111827;
+
+    margin-top: 10px;
+  }
+
+  .metric-label {
+    margin-top: 8px;
+
+    color: #2563eb;
+
+    font-weight: 600;
+  }
+
+  /* ---------- DAY SECTIONS ---------- */
+
+  .day-section {
+    width: 100%;
+
+    margin-top: 10px;
+  }
+
+  .day-title {
+    font-size: 28px;
+
+    font-weight: 800;
+
+    color: #111827;
+
+    margin-bottom: 24px;
+  }
+
+  /* ---------- TIMELINE ---------- */
+
+  .timeline-wrapper {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 20px;
+  }
+
+  .timeline-row {
+    width: 100%;
+
+    display: grid;
+
+    grid-template-columns:
+      90px
+      20px
+      minmax(0, 1fr);
+
+    gap: 18px;
+
+    align-items: flex-start;
+  }
+
+  .timeline-time {
+    font-size: 13px;
+
+    color: #6b7280;
+
+    padding-top: 16px;
+
+    white-space: nowrap;
+  }
+
+  .timeline-dot {
+    width: 16px;
+
+    height: 16px;
+
+    border-radius: 50%;
+
+    margin-top: 18px;
+
+    flex-shrink: 0;
+  }
+
+  .timeline-card {
+    width: 100%;
+
+    background: white;
+
+    border-radius: 24px;
+
+    padding: 24px;
+
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.04);
+
+    overflow: hidden;
+  }
+
+  .timeline-header {
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: flex-start;
+
+    gap: 18px;
+  }
+
+  .timeline-title {
+    font-size: 20px;
+
+    font-weight: 700;
+
+    color: #111827;
+
+    line-height: 1.4;
+  }
+
+  .timeline-cost {
+    color: #2563eb;
+
+    font-weight: 800;
+
+    font-size: 18px;
+
+    white-space: nowrap;
+  }
+
+  .timeline-location {
+    margin-top: 14px;
+
+    color: #6b7280;
+
+    line-height: 1.7;
+
+    word-break: break-word;
+  }
+
+  .timeline-meta {
+    display: flex;
+
+    flex-wrap: wrap;
+
+    gap: 10px;
+
+    margin-top: 20px;
+  }
+
+  .timeline-chip,
+  .transport-chip {
+    background: #eef2ff;
+
+    color: #3730a3;
+
+    border-radius: 999px;
+
+    padding: 8px 14px;
+
+    font-size: 12px;
+
+    font-weight: 600;
+  }
+
+  /* ---------- ANIMATION ---------- */
+
+  @keyframes messageFadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* ---------- MOBILE ---------- */
+
+  @media (max-width: 900px) {
+    .minimal-chat-shell {
+      height: calc(100vh - 80px);
+
+      padding: 10px 14px;
+    }
+
+    .chat-input-wrap {
+      flex-direction: column;
+
+      gap: 12px;
+    }
+
+    .send-btn {
+      width: 100%;
+
+      height: 50px;
+    }
+
+    .trip-hero {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .timeline-row {
+      grid-template-columns:
+        70px
+        16px
+        minmax(0, 1fr);
+
+      gap: 12px;
+    }
+
+    .timeline-card {
+      padding: 18px;
+    }
+
+    .timeline-header {
+      flex-direction: column;
+    }
+
+    .timeline-cost {
+      margin-top: 8px;
+    }
+
+    .user-bubble {
+      max-width: 90%;
+    }
+
+    .trip-heading {
+      font-size: 28px;
+    }
+
+    .metric-value {
+      font-size: 32px;
+    }
+  }
+</style>
+
+<div class="minimal-chat-shell">
+  <div class="quick-prompts">
+    <button class="suggestion-btn">Italy adventure trip under 2000€</button>
+
+    <button class="suggestion-btn">Swiss Alps leisure vacation</button>
+
+    <button class="suggestion-btn">Paris and Amsterdam trip</button>
+
+    <button class="suggestion-btn">Prague weekend getaway</button>
+  </div>
+
+  <div id="chat-feed" class="chat-feed"></div>
+
+  <div class="chat-input-wrap">
+    <textarea
+      id="chat-input"
+      class="chat-textarea"
+      placeholder="Describe your ideal European trip..."
+    ></textarea>
+
+    <button id="send-btn" class="send-btn">Generate</button>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='chatbot.js') }}"></script>
+
+{% endblock %}

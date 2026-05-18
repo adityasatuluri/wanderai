@@ -1,0 +1,397 @@
+{% extends 'base.html' %}
+{% block title %}{{ destination.name if destination else 'Itinerary' }}{% endblock %}
+{% block content %}
+<!-- Empty state - shown when no itinerary exists -->
+<div id="itinerary-empty-state" style="display: none;"></div>
+
+<!-- Content area - shown when itinerary exists -->
+<div id="itinerary-content"
+     data-destination-slug="{{ place_id if place_id else '' }}"
+     data-destination-name="{{ destination.name if destination else '' }}"
+     data-destination-location="{{ destination.location if destination else '' }}"
+     data-destination-slug2="{{ destination.slug if destination else '' }}"
+     data-destination-cost="{{ destination.average_cost if destination else 0 }}"
+     data-destination-days="{{ destination.average_duration_days if destination else 3 }}">
+<script>
+// Load itinerary data when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    const contentDiv = document.getElementById('itinerary-content');
+    const destinationSlug = contentDiv.getAttribute('data-destination-slug');
+    if (destinationSlug) {
+        loadItineraryData(destinationSlug);
+    } else {
+        generateSampleItinerary();
+    }
+});
+
+async function loadItineraryData(slug) {
+    try {
+        const token = localStorage.getItem('auth_token');
+        const headers = {};
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const response = await fetch(`http://localhost:4000/api/itinerary/${slug}`, {
+            headers: headers
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            if (data && data.length > 0) {
+                renderItineraryTimeline(data);
+            } else {
+                generateSampleItinerary();
+            }
+        } else {
+            generateSampleItinerary();
+        }
+    } catch (error) {
+        console.log('Loading sample itinerary...');
+        generateSampleItinerary();
+    }
+}
+
+function generateSampleItinerary() {
+    const contentDiv = document.getElementById('itinerary-content');
+    const days = parseInt(contentDiv.getAttribute('data-destination-days')) || 3;
+    const name = contentDiv.getAttribute('data-destination-name') || 'Destination';
+
+    const itinerary = [];
+    const activities = [
+        { time: '09:00', title: 'Morning Exploration', description: 'Visit main landmarks and attractions' },
+        { time: '12:00', title: 'Lunch Break', description: 'Enjoy local cuisine at a recommended restaurant' },
+        { time: '14:00', title: 'Afternoon Activities', description: 'Cultural sites and shopping' },
+        { time: '17:00', title: 'Evening Relaxation', description: 'Sunset views and leisure time' },
+        { time: '19:00', title: 'Dinner', description: 'Fine dining experience' }
+    ];
+
+    for (let i = 1; i <= days; i++) {
+        itinerary.push({
+            day: i,
+            activities: activities
+        });
+    }
+
+    renderItineraryTimeline(itinerary);
+}
+
+function renderItineraryTimeline(itineraryData) {
+    const timeline = document.getElementById('itinerary-timeline');
+    if (!timeline) return;
+
+    let html = '';
+
+    if (Array.isArray(itineraryData) && itineraryData.length > 0 && itineraryData[0].day) {
+        // Backend data format
+        const grouped = {};
+        itineraryData.forEach(item => {
+            if (!grouped[item.day]) grouped[item.day] = [];
+            grouped[item.day].push(item);
+        });
+
+        Object.keys(grouped).sort().forEach(day => {
+            html += `
+                <div class="timeline-day">
+                    <div class="timeline-day-header">
+                        <strong>Day ${day}</strong>
+                        <span>${grouped[day].length} activities</span>
+                    </div>
+                    ${grouped[day].map(activity => `
+                        <div class="timeline-row">
+                            <div>
+                                <h4>${activity.activity || 'Activity'}</h4>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        });
+    } else {
+        // Sample format
+        const days = Array.isArray(itineraryData) ? itineraryData : [];
+        days.forEach(dayData => {
+            const dayNum = dayData.day || 1;
+            const activities = dayData.activities || [];
+
+            html += `
+                <div class="timeline-day">
+                    <div class="timeline-day-header">
+                        <strong>Day ${dayNum}</strong>
+                        <span>${activities.length} activities</span>
+                    </div>
+                    ${activities.map(activity => `
+                        <div class="timeline-row">
+                            <div>
+                                <h4>${activity.title || 'Activity'}</h4>
+                                <p>${activity.description || ''}</p>
+                            </div>
+                            <time>${activity.time || ''}</time>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        });
+    }
+
+    timeline.innerHTML = html;
+}
+
+function saveToMyTrips() {
+    const contentDiv = document.getElementById('itinerary-content');
+    const token = localStorage.getItem('auth_token');
+
+    if (!token) {
+        alert('Please login to save trips');
+        return;
+    }
+
+    fetch('/api/user/trips', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+            destination_slug: contentDiv.getAttribute('data-destination-slug2'),
+            destination_name: contentDiv.getAttribute('data-destination-name'),
+            location: contentDiv.getAttribute('data-destination-location'),
+            budget: parseInt(contentDiv.getAttribute('data-destination-cost')),
+            days: parseInt(contentDiv.getAttribute('data-destination-days'))
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.msg) {
+            alert('Trip saved successfully!');
+        } else {
+            alert('Failed to save trip');
+        }
+    })
+    .catch(error => {
+        alert('Error saving trip');
+    });
+}
+
+function shareItinerary() {
+    const contentDiv = document.getElementById('itinerary-content');
+    const name = contentDiv.getAttribute('data-destination-name') || 'this destination';
+    const shareText = `Check out this itinerary for ${name}!`;
+
+    if (navigator.share) {
+        navigator.share({
+            title: name || 'Itinerary',
+            text: shareText,
+            url: window.location.href
+        });
+    } else {
+        navigator.clipboard.writeText(window.location.href);
+        alert('Link copied to clipboard!');
+    }
+}
+</script>
+    <section class="detail-header">
+        <div class="breadcrumb-heading">
+            <h1 id="itinerary-title">{{ destination.name if destination else 'AI Itinerary' }}</h1>
+            <span>/ Recommendations / Trip Planning</span>
+        </div>
+        <div style="display: flex; gap: 12px;">
+            <a href="{{ url_for('dashboard') }}" class="outline-chip">← Back to Dashboard</a>
+            <a href="{{ url_for('trip_results') }}" class="solid-chip">Trip Results</a>
+        </div>
+    </section>
+
+    <section class="hero-banner compact" id="itinerary-hero">
+        <img id="itinerary-image" 
+             src="{% if destination and destination.image %}{{ url_for('static', filename='images/' + destination.image) }}?v=20260403{% else %}{{ url_for('static', filename='images/empty.svg') }}?v=20260403{% endif %}" 
+             alt="{{ destination.name if destination else 'Destination' }}" 
+             data-fallback="{{ url_for('static', filename='images/empty.svg') }}?v=20260403"
+             onerror="this.src=this.dataset.fallback">
+        <div class="hero-overlay">
+            <span class="nature-tag" id="itinerary-tag">{{ destination.category if destination else 'Plan' }}</span>
+            <h2 id="itinerary-destination">{{ destination.name if destination else 'Destination' }}</h2>
+            <p id="itinerary-location">{{ destination.location if destination else 'Location' }}</p>
+        </div>
+    </section>
+
+    <!-- Trip Summary Cards -->
+    <section class="trip-results-summary itinerary-summary" id="itinerary-summary">
+        <div class="summary-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin: 24px 0;">
+            <div class="summary-card" style="background: #fff; padding: 16px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+                <span style="color: #70707a; font-size: 12px;">Duration</span>
+                <strong id="summary-days" style="display: block; font-size: 20px; color: #1a1a2e; margin-top: 4px;">{{ destination.average_duration_days if destination else '-' }} days</strong>
+            </div>
+            <div class="summary-card" style="background: #fff; padding: 16px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+                <span style="color: #70707a; font-size: 12px;">Budget</span>
+                <strong id="summary-budget" style="display: block; font-size: 20px; color: #1a1a2e; margin-top: 4px;">£{{ destination.average_cost if destination else '-' }}</strong>
+            </div>
+            <div class="summary-card" style="background: #fff; padding: 16px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+                <span style="color: #70707a; font-size: 12px;">Risk Level</span>
+                <strong id="summary-risk" style="display: block; font-size: 20px; color: #1a1a2e; margin-top: 4px;">{{ destination.risk if destination else 'Low' }}</strong>
+            </div>
+            <div class="summary-card" style="background: #fff; padding: 16px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+                <span style="color: #70707a; font-size: 12px;">Best Time</span>
+                <strong id="summary-best" style="display: block; font-size: 14px; color: #1a1a2e; margin-top: 4px;">{{ destination.best if destination else 'Year-round' }}</strong>
+            </div>
+        </div>
+    </section>
+
+    <!-- Destination Description -->
+    <section class="description-section" style="margin: 24px 0; padding: 20px; background: #fff; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+        <h3 style="margin-bottom: 12px; color: #1a1a2e;">About {{ destination.name if destination else 'Destination' }}</h3>
+        <p id="destination-description" style="color: #4b5563; line-height: 1.6;">
+            {{ destination.description if destination else 'Explore this amazing destination with our AI-generated itinerary.' }}
+        </p>
+    </section>
+
+    <!-- Daily Schedule Timeline -->
+    <section class="timeline-section">
+        <h3 style="display: flex; align-items: center; gap: 8px;">
+            <span style="width: 8px; height: 8px; background: #11258f; border-radius: 50%;"></span>
+            Generated Daily Schedule
+        </h3>
+        <div class="long-timeline timeline" id="itinerary-timeline">
+            <!-- Timeline items will be loaded dynamically -->
+        </div>
+    </section>
+
+    <!-- Action Buttons -->
+    <section class="itinerary-actions" style="margin: 32px 0; display: flex; gap: 12px; justify-content: center;">
+        <button class="solid-chip blue-chip" onclick="saveToMyTrips()" style="padding: 12px 24px;">
+            💾 Save to My Trips
+        </button>
+        <button class="outline-chip" onclick="shareItinerary()" style="padding: 12px 24px;">
+            📤 Share
+        </button>
+        <button class="outline-chip" onclick="window.print()" style="padding: 12px 24px;">
+            🖨️ Print
+        </button>
+    </section>
+</div>
+
+<style>
+.timeline-day {
+    background: #fff;
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.timeline-day-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e5e7eb;
+}
+.timeline-day-header strong {
+    font-size: 18px;
+    color: #1a1a2e;
+}
+.timeline-day-header span {
+    color: #70707a;
+    font-size: 14px;
+}
+.timeline-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 12px 0;
+    border-bottom: 1px solid #f3f4f6;
+}
+.timeline-row:last-child {
+    border-bottom: none;
+}
+.timeline-row h4 {
+    font-size: 15px;
+    color: #1a1a2e;
+    margin-bottom: 4px;
+}
+.timeline-row p {
+    font-size: 13px;
+    color: #4b5563;
+    margin-bottom: 4px;
+}
+.timeline-row small {
+    font-size: 11px;
+    color: #9ca3af;
+}
+.timeline-row time {
+    font-size: 12px;
+    color: #11258f;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* Schedule Item Styles for Agenda Panel */
+.schedule-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: #fff;
+    border-radius: 12px;
+    margin-bottom: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    transition: all 0.2s;
+}
+.schedule-item:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    transform: translateY(-1px);
+}
+.schedule-item.completed {
+    opacity: 0.6;
+    background: #f9fafb;
+}
+.schedule-item.completed strong {
+    text-decoration: line-through;
+}
+.schedule-content {
+    flex: 1;
+}
+.schedule-content strong {
+    display: block;
+    font-size: 14px;
+    color: #1a1a2e;
+    margin-bottom: 2px;
+}
+.schedule-content span {
+    font-size: 12px;
+    color: #70707a;
+}
+.schedule-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.schedule-actions time {
+    font-size: 12px;
+    color: #11258f;
+    font-weight: 600;
+    background: #eef2ff;
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+.schedule-actions button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 4px;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+.schedule-actions button:hover {
+    opacity: 1;
+}
+@media print {
+    .sidebar, .topbar, .itinerary-actions, .agenda-panel {
+        display: none !important;
+    }
+    .page-content {
+        margin-left: 0 !important;
+    }
+}
+</style>
+{% endblock %}

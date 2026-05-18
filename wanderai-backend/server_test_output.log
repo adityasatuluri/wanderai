@@ -1,0 +1,42 @@
+Server running on port 4000
+  POST /api/chat          - Persistent chat
+  GET  /api/chat/history  - Load chat history
+  POST /api/trip          - Save trip
+  GET  /api/trips         - Get trips
+  POST /api/itinerary     - Save itinerary
+SQLite Connected
+Chat error: RateLimitError: 429 You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.
+    at APIError.generate (c:\Users\kesha\OneDrive\Desktop\New folder\wanderai-backend\node_modules\openai\error.js:63:20)
+    at OpenAI.makeStatusError (c:\Users\kesha\OneDrive\Desktop\New folder\wanderai-backend\node_modules\openai\core.js:302:33)
+    at OpenAI.makeRequest (c:\Users\kesha\OneDrive\Desktop\New folder\wanderai-backend\node_modules\openai\core.js:346:30)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async c:\Users\kesha\OneDrive\Desktop\New folder\wanderai-backend\server.js:119:24 {
+  status: 429,
+  headers: {
+    'alt-svc': 'h3=":443"; ma=86400',
+    'cf-cache-status': 'DYNAMIC',
+    'cf-ray': '9e876ae1fd7bc149-DEL',
+    connection: 'keep-alive',
+    'content-length': '337',
+    'content-type': 'application/json; charset=utf-8',
+    date: 'Tue, 07 Apr 2026 07:46:16 GMT',
+    server: 'cloudflare',
+    'set-cookie': '__cf_bm=ZATBGSpMG8RCL8c5T0WP_8SFWPNS.SHWN9TGQ1ldqoQ-1775547975.9972594-1.0.1.1-RRsd7pDCpDtgDHauWoxEgmU59BdeZu3XDZln5c5V8yEApgJv1rVy6shbW06xOQTaEnYLDT5jA_8H_ewk1r2gNfDFY9Jnw05QDent6Bfx3lGnIjKZO8863ePZeDLNxli4; HttpOnly; Secure; Path=/; Domain=api.openai.com; Expires=Tue, 07 Apr 2026 08:16:16 GMT, _cfuvid=hh7lkN7ew6cPdVf4NJ6KU0SnCnGfv5o4hUQrSAovp4w-1775547975.9972594-1.0.1.1-9D5XOQn_rNBvDUDanVqsngrNhQ0rActEekmjjI8RHyE; HttpOnly; SameSite=None; Secure; Path=/; Domain=api.openai.com',
+    'strict-transport-security': 'max-age=31536000; includeSubDomains; preload',
+    vary: 'Origin',
+    'x-content-type-options': 'nosniff',
+    'x-openai-proxy-wasm': 'v0.1',
+    'x-request-id': 'req_f805b3ec3e3545e0b1905cfa29abd8ae'
+  },
+  request_id: 'req_f805b3ec3e3545e0b1905cfa29abd8ae',
+  error: {
+    message: 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.',
+    type: 'insufficient_quota',
+    param: null,
+    code: 'insufficient_quota'
+  },
+  code: 'insufficient_quota',
+  param: null,
+  type: 'insufficient_quota'
+}
+Demo OTP for demo2@test.com: 751557
