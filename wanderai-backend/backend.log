@@ -1,7 +1,0 @@
-SQLite Connected: c:\Users\kesha\OneDrive\Desktop\New folder\data\wanderai-backend.db
-Server running on port 4000
-  POST /api/chat          - Persistent chat
-  GET  /api/chat/history  - Load chat history
-  POST /api/trip          - Save trip
-  GET  /api/trips         - Get trips
-  POST /api/itinerary     - Save itinerary

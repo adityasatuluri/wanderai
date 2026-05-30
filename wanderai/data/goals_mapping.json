@@ -1,6 +1,0 @@
-[
-  { "goal_name": "Adventure", "activity_categories": ["Hiking", "Trekking", "Wildlife", "Water Adventure", "Outdoor"] },
-  { "goal_name": "Relaxation", "activity_categories": ["Beach", "Wellness", "Scenic", "Cruise", "Leisure"] },
-  { "goal_name": "Nature", "activity_categories": ["Park", "Garden", "Wildlife", "Outdoor", "Scenic"] },
-  { "goal_name": "Sightseeing", "activity_categories": ["History", "Culture", "Food", "City", "Scenic"] }
-]

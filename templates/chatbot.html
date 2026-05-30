@@ -1,0 +1,652 @@
+{% extends 'base.html' %} {% block title %}Wander AI{% endblock %} {% block
+content %}
+
+<style>
+  /* Reset within the chat bounds */
+  .minimal-chat-shell,
+  .minimal-chat-shell * {
+    box-sizing: border-box;
+  }
+
+  /* Core Chat Layout */
+  .minimal-chat-shell {
+    max-width: 1050px;
+    margin: 0 auto;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: 30px 40px 24px;
+  }
+
+  /* Quick Prompts */
+  .quick-prompts {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 24px;
+    flex-shrink: 0;
+  }
+
+  .suggestion-btn {
+    border: 1px solid #e2e8f0;
+    background: white;
+    color: #1e293b;
+    padding: 12px 18px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  }
+
+  .suggestion-btn:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    transform: translateY(-2px);
+  }
+
+  /* Chat Feed */
+  .chat-feed {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    min-height: 0;
+    padding-right: 12px;
+    scroll-behavior: smooth;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Modern Scrollbar */
+  .chat-feed::-webkit-scrollbar {
+    width: 6px;
+  }
+  .chat-feed::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 999px;
+  }
+
+  /* User/Bot Chat Rows */
+  .chat-row {
+    display: flex;
+    width: 100%;
+    margin-bottom: 24px;
+    animation: messageFadeIn 0.3s ease-out;
+  }
+
+  .user-row {
+    justify-content: flex-end;
+  }
+
+  .user-bubble {
+    background: #2563eb;
+    color: white;
+    padding: 16px 22px;
+    border-radius: 20px 20px 4px 20px;
+    max-width: 65%;
+    line-height: 1.6;
+    font-size: 15px;
+    box-shadow: 0 4px 15px rgba(37, 99, 235, 0.15);
+  }
+
+  /* Input Area */
+  .chat-input-wrap {
+    display: flex;
+    gap: 16px;
+    align-items: flex-end;
+    padding-top: 20px;
+    margin-top: auto;
+    flex-shrink: 0;
+    background: #f4f7fb;
+  }
+
+  .chat-textarea {
+    flex: 1;
+    min-height: 56px;
+    max-height: 150px;
+    resize: none;
+    border: 1px solid #e2e8f0;
+    outline: none;
+    background: white;
+    border-radius: 24px;
+    padding: 16px 24px;
+    font-size: 15px;
+    line-height: 1.5;
+    font-family: inherit;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    transition: border-color 0.2s;
+  }
+
+  .chat-textarea:focus {
+    border-color: #2563eb;
+  }
+
+  .chat-textarea::placeholder {
+    color: #94a3b8;
+  }
+
+  .send-btn {
+    width: 120px;
+    height: 56px;
+    border: none;
+    border-radius: 24px;
+    background: #2563eb;
+    color: white;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.2s;
+    box-shadow: 0 4px 15px rgba(37, 99, 235, 0.2);
+    flex-shrink: 0;
+  }
+
+  .send-btn:hover {
+    background: #1d4ed8;
+    transform: translateY(-2px);
+  }
+
+  @keyframes messageFadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .mismatch-highlight {
+    border: 2px solid #ef4444 !important;
+    background: #fef2f2 !important;
+    animation: pulseRed 2s infinite;
+  }
+  @keyframes pulseRed {
+    0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+  }
+
+  /* --- ITINERARY COMPONENT STYLES --- */
+  .trip-wrapper {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+  .trip-hero {
+    width: 100%;
+    background: white;
+    border-radius: 24px;
+    padding: 32px 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+    min-height: 160px; /* Gives the image room to breathe */
+  }
+  .trip-heading {
+    font-size: 32px;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.2;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); /* Helps text pop on images */
+  }
+  .trip-subheading {
+    margin-top: 8px;
+    color: #64748b;
+    font-size: 15px;
+  }
+  .trip-stats {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .trip-pill {
+    background: #eff6ff;
+    color: #2563eb;
+    padding: 10px 16px;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 13px;
+    backdrop-filter: blur(4px); /* Sleek glass effect */
+  }
+
+  /* --- AGENT THINKING LOGS --- */
+  .agent-thinking-widget {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    margin-bottom: 24px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+  }
+
+  .agent-thinking-widget summary {
+    padding: 14px 20px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #475569;
+    cursor: pointer;
+    background: #f8fafc;
+    list-style: none; /* Hide default arrow */
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.2s;
+  }
+
+  .agent-thinking-widget summary:hover {
+    background: #f1f5f9;
+  }
+
+  .agent-thinking-widget summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .agent-steps {
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    font-family: monospace;
+    font-size: 13px;
+    background: #0f172a; /* Dark terminal look */
+    color: #cbd5e1;
+  }
+
+  .step-row {
+    line-height: 1.5;
+  }
+
+  .step-row span {
+    font-weight: bold;
+    color: #94a3b8;
+    margin-right: 6px;
+  }
+
+  .step-row.success {
+    color: #4ade80;
+  }
+  .step-row.error {
+    color: #f87171;
+  }
+
+  /* Metrics Grid */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    width: 100%;
+  }
+  .metric-card {
+    background: white;
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .metric-name {
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .metric-value {
+    font-size: 36px;
+    font-weight: 800;
+    color: #0f172a;
+    margin-top: 8px;
+  }
+  .metric-label {
+    margin-top: 6px;
+    color: #2563eb;
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  /* Day Timeline */
+  .day-section {
+    width: 100%;
+    margin-top: 16px;
+  }
+  .day-title {
+    font-size: 24px;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 20px;
+  }
+  .timeline-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .timeline-row {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 80px 16px minmax(0, 1fr);
+    gap: 16px;
+    align-items: flex-start;
+  }
+  .timeline-time {
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+    padding-top: 18px;
+    white-space: nowrap;
+    text-align: right;
+  }
+  .timeline-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-top: 20px;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 4px #f4f7fb; /* Matches background */
+    position: relative;
+    z-index: 2;
+  }
+  .timeline-card {
+    width: 100%;
+    background: white;
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+  }
+  .timeline-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .timeline-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.4;
+  }
+  .timeline-cost {
+    color: #2563eb;
+    font-weight: 800;
+    font-size: 16px;
+    white-space: nowrap;
+    background: #eff6ff;
+    padding: 6px 12px;
+    border-radius: 8px;
+  }
+  .timeline-location {
+    margin-top: 12px;
+    color: #64748b;
+    font-size: 14px;
+    line-height: 1.6;
+    word-break: break-word;
+  }
+  .timeline-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 16px;
+  }
+  .timeline-chip,
+  .transport-chip {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #475569;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .transport-chip {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+    color: #1d4ed8;
+  }
+</style>
+
+<div class="minimal-chat-shell">
+  <div id="quick-prompts-container">
+    {% if not current_chat %}
+    <div class="quick-prompts">
+      <button class="suggestion-btn" onclick="setPrompt(this)">
+        {{ dynamic_prompt }}
+      </button>
+      <button class="suggestion-btn" onclick="setPrompt(this)">
+        Taj Mahal, Agra sightseeing trip
+      </button>
+      <button class="suggestion-btn" onclick="setPrompt(this)">
+        Munnar, Kerala nature retreat
+      </button>
+      <button class="suggestion-btn" onclick="setPrompt(this)">
+        Rishikesh river rafting adventure
+      </button>
+    </div>
+    {% endif %}
+  </div>
+
+  <div id="chat-feed" class="chat-feed">
+    {% if current_chat %} {% for msg in current_chat.messages %} {% if msg.role
+    == 'user' %}
+    <div class="chat-row user-row">
+      <div class="user-bubble">{{ msg.content }}</div>
+    </div>
+    {% else %}
+    <div class="bot-row" data-msg-id="{{ msg.id }}">
+        {{ msg.content | safe }}
+    </div>
+    {% endif %} {% endfor %} {% endif %}
+  </div>
+
+  {% if current_chat and current_chat.get('has_weather_mismatch') %}
+  <div class="mismatch-banner" style="background: #fef2f2; border: 1px solid #ef4444; border-radius: 12px; padding: 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+      <div>
+          <div style="color: #b91c1c; font-weight: 800; font-size: 15px; margin-bottom: 4px;">⚠️ Weather Alert</div>
+          <div style="color: #991b1b; font-size: 13px;">A sudden weather event conflicts with your itinerary's outdoor activities.</div>
+      </div>
+      <button onclick="replanItinerary(this)" style="background: #ef4444; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 13px;">Update Itinerary</button>
+  </div>
+  {% endif %}
+
+  <div class="chat-input-wrap">
+    <textarea
+      id="chat-input"
+      class="chat-textarea"
+      placeholder="Describe your ideal trip..."
+    ></textarea>
+    <button id="send-btn" class="send-btn">Generate</button>
+  </div>
+</div>
+
+<script>
+  // Setup Global State
+  let currentChatId = "{{ chat_id if chat_id else '' }}";
+  const chatFeed = document.getElementById("chat-feed");
+  const chatInput = document.getElementById("chat-input");
+  const sendBtn = document.getElementById("send-btn");
+  const promptsContainer = document.getElementById("quick-prompts-container");
+
+  // Auto-scroll to bottom on load
+  chatFeed.scrollTop = chatFeed.scrollHeight;
+
+  // Handle Quick Prompts
+  function setPrompt(btn) {
+    chatInput.value = btn.innerText;
+    sendMessage();
+  }
+
+  // Send Message Logic
+  async function sendMessage() {
+    const message = chatInput.value.trim();
+    if (!message) return;
+
+    // 1. Hide quick prompts immediately
+    if (promptsContainer) promptsContainer.style.display = "none";
+
+    // 2. Append User Message to UI
+    chatInput.value = "";
+    const userRow = document.createElement("div");
+    userRow.className = "chat-row user-row";
+    userRow.innerHTML = `<div class="user-bubble">${message}</div>`;
+    chatFeed.appendChild(userRow);
+    chatFeed.scrollTop = chatFeed.scrollHeight;
+
+    // 3. Add a temporary loading state
+    const loaderRow = document.createElement("div");
+    loaderRow.id = "loading-state";
+    loaderRow.innerHTML = `
+      <div style="margin-bottom: 24px; text-align: center;">
+         <span style="font-weight:bold; color: #2563eb; background: #eff6ff; padding: 10px 16px; border-radius: 20px; font-size: 14px;">
+            🧠 WanderAI is researching and planning...
+         </span>
+      </div>`;
+    chatFeed.appendChild(loaderRow);
+    chatFeed.scrollTop = chatFeed.scrollHeight;
+
+    // 4. Send to Backend
+    try {
+      const response = await fetch("/api/ai-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: message, chat_id: currentChatId }),
+      });
+
+      const data = await response.json();
+
+      // Remove loading state
+      const loader = document.getElementById("loading-state");
+      if (loader) loader.remove();
+
+      // 5. Update URL, Sidebar, and Simulator if this was a new chat
+      if (data.is_new_chat) {
+        currentChatId = data.chat_id;
+        window.history.pushState({}, "", "/c/" + currentChatId);
+
+        const sidebar = document.getElementById("sidebar-chat-history");
+        const newLink = document.createElement("a");
+        newLink.href = "/c/" + currentChatId;
+        newLink.className = "chat-history-item active";
+        newLink.innerText = data.title;
+
+        if (sidebar.innerText.includes("No history")) sidebar.innerHTML = "";
+        sidebar.prepend(newLink);
+        
+        // Update Simulator
+        const simBtn = document.querySelector(".sim-btn");
+        if (simBtn) simBtn.setAttribute("onclick", `triggerGlobalWeather('${currentChatId}')`);
+        
+        const simDay = document.getElementById("sim-day");
+        if (simDay && data.chat_days) {
+            simDay.innerHTML = "";
+            simDay.setAttribute("data-start", data.chat_start_date);
+            for(let i=1; i<=data.chat_days; i++) {
+                let d = new Date(data.chat_start_date);
+                d.setDate(d.getDate() + i - 1);
+                const dateStr = d.toISOString().split('T')[0];
+                simDay.innerHTML += `<option value="${i}">Day ${i} (${dateStr})</option>`;
+            }
+        }
+      }
+
+      // 6. Append AI Response to UI
+      const botWrapper = document.createElement("div");
+      botWrapper.className = "bot-row";
+      botWrapper.setAttribute("data-msg-id", data.msg_id);
+      botWrapper.innerHTML = data.reply;
+      chatFeed.appendChild(botWrapper);
+      chatFeed.scrollTop = chatFeed.scrollHeight;
+    } catch (error) {
+      const loader = document.getElementById("loading-state");
+      if (loader) loader.remove();
+      alert(
+        "Error connecting to WanderAI backend. Please check your terminal for python errors.",
+      );
+    }
+  }
+
+  // Replan Itinerary
+  async function replanItinerary(btn) {
+    btn.innerText = "Updating...";
+    
+    // Get the last bot message ID
+    const botRows = document.querySelectorAll('.bot-row');
+    const lastBotRow = botRows.length > 0 ? botRows[botRows.length - 1] : null;
+    const msgId = lastBotRow ? lastBotRow.dataset.msgId : null;
+    
+    // Add loading
+    const loaderRow = document.createElement("div");
+    loaderRow.id = "loading-state";
+    loaderRow.innerHTML = `
+      <div style="margin-bottom: 24px; text-align: center;">
+         <span style="font-weight:bold; color: #d97706; background: #fef3c7; padding: 10px 16px; border-radius: 20px; font-size: 14px;">
+            ⚠️ Adapting itinerary to new weather conditions...
+         </span>
+      </div>`;
+    chatFeed.appendChild(loaderRow);
+    chatFeed.scrollTop = chatFeed.scrollHeight;
+    
+    try {
+        const response = await fetch("/api/replan-itinerary", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ chat_id: currentChatId, msg_id: msgId }),
+        });
+        
+        if(response.ok) {
+            window.location.reload();
+        } else {
+            alert("Failed to update itinerary.");
+            btn.innerText = "Update Itinerary";
+            const loader = document.getElementById("loading-state");
+            if (loader) loader.remove();
+        }
+    } catch (e) {
+        alert("Error connecting to server.");
+        btn.innerText = "Update Itinerary";
+        const loader = document.getElementById("loading-state");
+        if (loader) loader.remove();
+    }
+  }
+
+  // Bind enter key
+  chatInput.addEventListener("keypress", function (e) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  // Bind click
+  sendBtn.addEventListener("click", sendMessage);
+
+  // Handle highlights
+  const chatOverrides = {{ chat_overrides | tojson | safe if chat_overrides else '[]' }};
+  if (chatOverrides && chatOverrides.length > 0) {
+      chatOverrides.forEach(ov => {
+          const daySections = document.querySelectorAll('.day-section');
+          daySections.forEach(ds => {
+              if (ds.querySelector('.day-title') && ds.querySelector('.day-title').innerText.includes('Day ' + ov.day)) {
+                  const rows = ds.querySelectorAll('.timeline-row');
+                  rows.forEach(r => {
+                      if (r.querySelector('.timeline-time') && r.querySelector('.timeline-time').innerText.includes(ov.time)) {
+                          const card = r.querySelector('.timeline-card');
+                          if (card) {
+                              card.classList.add('mismatch-highlight');
+                              const header = card.querySelector('.timeline-header');
+                              if (header && !header.innerHTML.includes(ov.condition)) {
+                                  header.innerHTML += `<div style="color: #ef4444; font-size: 13px; font-weight: 800; padding: 4px 8px; background: #fee2e2; border-radius: 8px;">⚠️ ${ov.condition}</div>`;
+                              }
+                          }
+                      }
+                  });
+              }
+          });
+      });
+  }
+</script>
+
+{% endblock %}
